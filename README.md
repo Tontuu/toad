@@ -1,7 +1,7 @@
 # Toad
 Parse TODO patterns inside a source file.
 
-<img src="assets/toad_example.png">
+<img src="assets/toad_cli_example.png">
 
 ## Installation
 ```console
