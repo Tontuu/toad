@@ -1,5 +1,6 @@
-import argparse, re
+#!/usr/bin/env python
 
+import argparse, re
 helpMessage = """\
 \033[1;31mUsage\033[0m: toad [OPTION...] file
 
@@ -192,6 +193,7 @@ def writeTodos(todos, file, markdown, isLineNumberActive):
             file.write('\n')
 
     file.close()
+    print("To-dos added to \033[1;31m{}\033[0m file".format(file.name))
 
 def printMatches(count, target):
     target = target if target else "todo"
