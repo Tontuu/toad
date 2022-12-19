@@ -16,16 +16,16 @@ toad file [OPTIONS...]
 ```
 
 ### Some examples
-```console
+```sh
 # Help message
-$ toad -h
+toad -h
 
 # Print all the matches for default pattern [todo]
-$ toad script.rs
+toad script.rs
 
 # Specifies the output file for to-dos
-$ toad script.rs -o my_todos.md
+toad script.rs -o my_todos.md
 
 # Delete all to-dos inside the given file
-$ toad script.rs -d "todo"
+toad script.rs -d "todo"
 ```
