@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse, re
+
 helpMessage = """\
 \033[1;31mUsage\033[0m: toad [OPTION...] file
 
@@ -250,40 +251,44 @@ def deleteTodos(file, target):
 
     print("All matches has been deleted from file!")
     exit(0)
-    
-args = makeArgs()
 
-if (args.delete):
-    deleteTodos(args.file, args.delete)
+def main():
+    args = makeArgs()
 
-if not args:
-    print(helpMessage)
-    exit(1)
+    if (args.delete):
+        deleteTodos(args.file, args.delete)
 
-todos = grepTodos(args.file, args.target, args.no_sort)
+    if not args:
+        print(helpMessage)
+        exit(1)
 
-if not todos[0]: # If array is empty
-    printMatches(len(todos[0]), args.target)
-    exit(1)
+    todos = grepTodos(args.file, args.target, args.no_sort)
 
-if todos[1]: # If todos has positional arrays
-    todos = sortTodos(todos[0], todos[1])
-else:
-    todos.pop()
+    if not todos[0]: # If array is empty
+        printMatches(len(todos[0]), args.target)
+        exit(1)
 
-isSortActive = args.no_sort; # Default is true
-isLineNumberActive = args.no_line # Default is True
-isToFormatSummary = True
-isToFormatNumber = True
+    if todos[1]: # If todos has positional arrays
+        todos = sortTodos(todos[0], todos[1])
+    else:
+        todos.pop()
 
-todos = formatTodos(todos, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber, args.summary, args.bullet)
+    isSortActive = args.no_sort; # Default is true
+    isLineNumberActive = args.no_line # Default is True
+    isToFormatSummary = True
+    isToFormatNumber = True
 
-printMatches(len(todos), args.target)
+    todos = formatTodos(todos, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber, args.summary, args.bullet)
 
-if not args.quiet:
-    printTodos(todos)
+    printMatches(len(todos), args.target)
 
-if args.output_file:
-    writeTodos(todos, args.output_file, args.no_markdown, args.no_line)
+    if not args.quiet:
+        printTodos(todos)
 
-exit(0)
+    if args.output_file:
+        writeTodos(todos, args.output_file, args.no_markdown, args.no_line)
+
+
+if __name__ == "__main__":
+    main()
+    exit(0)
