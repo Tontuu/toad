@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import argparse, re
 
 helpMessage = """\
@@ -271,7 +269,7 @@ def main():
     if todos[1]: # If todos has positional arrays
         todos = sortTodos(todos[0], todos[1])
     else:
-        todos.pop()
+        todos = todos[0]
 
     isSortActive = args.no_sort; # Default is true
     isLineNumberActive = args.no_line # Default is True
