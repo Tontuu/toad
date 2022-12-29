@@ -12,15 +12,16 @@ Parse TODO patterns in a file
 
   -t, --target                 Specifies target pattern
   -o, --output-file            Specifies the output file
+
   --summary                    Specifies custom summary
   --bullet                     Specifies custom bullet list symbol
 
-  -l, --no-line                Does not show line number which pattern was matched, default is true
-  -m, --no-markdown, --no-md   Does not show markdown separator symbol in output MD file
+  --no-line                    Does not show line number which pattern was matched, default is true
+  --no-markdown, --no-md       Does not show markdown separator symbol in output MD file
+  --no-sort                    Enumerate todos in the pattern order found accordingly to specified order patterns
 
-  -s, --no-sort                Enumerate todos in the pattern order found accordingly to specified order patterns
   -q, --quiet, --silent        Do not write todos to standard output
-  -d, --delete                 Delete todos inside file, MAKE SURE your file doesn't contain inline todo comments
+  -d, --delete                 Delete matches inside file, default is 'todos'
 """
 
 def makeArgs():
@@ -33,10 +34,10 @@ def makeArgs():
 
     parser.add_argument("-o", "--output-file", type=argparse.FileType('w'))
     parser.add_argument("-q", "--quiet", "--silent",      action="store_true")
-    parser.add_argument("-m", "--no-markdown", "--no-md", action="store_false")
-    parser.add_argument("-s", "--no-sort",                action="store_false")
-    parser.add_argument("-l", "--no-line",                action="store_false")
-    parser.add_argument("-d", "--delete")
+    parser.add_argument("--no-markdown", "--no-md",       action="store_false")
+    parser.add_argument("--no-sort",                      action="store_false")
+    parser.add_argument("--no-line",                      action="store_false")
+    parser.add_argument("-d", "--delete",                 const="todo", nargs='?')
     parser.add_argument("-t", "--target")
     parser.add_argument("--summary")
     parser.add_argument("--bullet")
@@ -153,7 +154,7 @@ def formatTodos(todos, isSortActive=True, isLineNumberActive=True, isToFormatSum
 
     return newTodos
 
-def printTodos(todos):
+def printTodos(todos, highlightMatch=False, target="todo"):
     # Get biggest string length to format as box
     biggestLength = 0
     for todo in todos:
@@ -165,6 +166,11 @@ def printTodos(todos):
     print(separator)
     for todo in todos:
         emptySpace = ' ' * (len(separator) - len(todo["str"]))
+
+
+        if highlightMatch:
+            todo_match = re.findall(target, todo["str"], re.IGNORECASE)[0]
+            todo["str"] = todo["str"].replace(todo_match, "\033[1;31m{}\033[0m".format(todo_match))
 
         print(todo["str"] + emptySpace + '|')
 
@@ -213,17 +219,21 @@ def deletePrompt(prompt):
         print("Invalid answer")
 
 def deleteTodos(file, target):
-    isSortActive = False;
+    isSortActive = False
     isLineNumberActive = True
     isToFormatSummary = False
     isToFormatNumber = False
 
     todos = grepTodos(file, target, isSortActive)[0] # Index 0 because it's not sorted
+    printMatches(len(todos), target)
+
+    if len(todos) == 0:
+        exit(1)
 
     todos = formatTodos(todos, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber)
 
-    printMatches(len(todos), target)
-    printTodos(todos)
+    highlightMatch = True
+    printTodos(todos, highlightMatch, target)
 
      # Double check
     isToDelete = deletePrompt("Are you sure you want to delete ALL todos in this file?")
