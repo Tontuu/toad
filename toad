@@ -269,15 +269,17 @@ def deleteTodos(file, target):
     exit(0)
 
 def searchFile(pattern):
-    files = glob.glob("main.*", recursive=True)
+    files = glob.glob("**/main.*", recursive=True)
+    files = list(filter(lambda file: file.count('.') < 2, files))
+
     if not files:
         print("toad: error: current dir has no " + pattern + " file")
         exit(1)
 
     if len(files) > 1:
         print("toad: error: current dir has more than one " + pattern + " file")
-        for f in files:
-            print("- " + f)
+        for file in files:
+            print("- " + file)
         exit(1)
 
     return open(files[0])
