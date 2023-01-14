@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# TODO: Implement find main file recursively automatically
-
 import argparse, re, glob
 from colorama import Fore, Style
 
