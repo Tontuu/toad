@@ -288,7 +288,23 @@ def deleteTodos(file, target):
 
 
 def main():
-    fileExtensions = ["py", "c", "rb", "cpp", "js", "rs", "s", "cs", "java"]
+    fileExtensions = [
+        "py",
+        "c",
+        "rb",
+        "cpp",
+        "js",
+        "rs",
+        "s",
+        "cs",
+        "java",
+        "sh",
+        "ts",
+        "r",
+        "pl",
+        "php",
+        "go",
+        "awk"]
 
     args = makeArgs()
 
