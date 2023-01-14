@@ -2,11 +2,11 @@
 
 # TODO: Implement find main file recursively automatically
 
-import argparse, re
+import argparse, re, glob
 from colorama import Fore, Style
 
 helpMessage = Style.BRIGHT + Fore.LIGHTRED_EX + """\
-Usage""" + Style.RESET_ALL + """: toad [OPTION...] file
+Usage""" + Style.RESET_ALL + """: toad [OPTION...] [file|main]
 
 Parse TODO patterns in a file """ + Style.BRIGHT + Fore.LIGHTRED_EX + """
 
@@ -44,7 +44,7 @@ def makeArgs():
     parser.add_argument("-t", "--target")
     parser.add_argument("--summary")
     parser.add_argument("--bullet")
-    parser.add_argument("file", type=argparse.FileType('r'))
+    parser.add_argument("file", nargs='?', type=argparse.FileType('r'))
 
     args = parser.parse_args();
 
@@ -205,14 +205,16 @@ def writeTodos(todos, file, markdown, isLineNumberActive):
     file.close()
     print("To-dos added to {}{}{} file".format(Style.BRIGHT + Fore.RED, file.name, Style.RESET_ALL))
 
-def printMatches(count, target):
+def printMatches(count, target, filename):
     target = target if target else "todo"
 
-    print("Found {}{}{} matches for {}{}{}"
+    print("Found {}{}{} matches for {}{}{} in {}{}{}"
           .format(Style.BRIGHT + Fore.RED,
                   count, Style.RESET_ALL,
                   Style.BRIGHT + Fore.RED,
-                  target, Style.RESET_ALL))
+                  target, Style.RESET_ALL,
+                  Style.BRIGHT + Fore.RED,
+                  filename, Style.RESET_ALL))
 
 def deletePrompt(prompt):
     while "Invalid answer":
@@ -231,7 +233,7 @@ def deleteTodos(file, target):
     isToFormatNumber = False
 
     todos = grepTodos(file, target, isSortActive)[0] # Index 0 because it's not sorted
-    printMatches(len(todos), target)
+    printMatches(len(todos), target, file.name)
 
     if len(todos) == 0:
         exit(1)
@@ -268,8 +270,26 @@ def deleteTodos(file, target):
     print("All matches has been deleted from file!")
     exit(0)
 
+def searchFile(pattern):
+    files = glob.glob("main.*", recursive=True)
+    if not files:
+        print("toad: error: current dir has no " + pattern + " file")
+        exit(1)
+
+    if len(files) > 1:
+        print("toad: error: current dir has more than one " + pattern + " file")
+        for f in files:
+            print("- " + f)
+        exit(1)
+
+    return open(files[0])
+
+
 def main():
     args = makeArgs()
+
+    if not args.file:
+        args.file = searchFile("main")
 
     if (args.delete):
         deleteTodos(args.file, args.delete)
@@ -281,7 +301,7 @@ def main():
     todos = grepTodos(args.file, args.target, args.no_sort)
 
     if not todos[0]: # If array is empty
-        printMatches(len(todos[0]), args.target)
+        printMatches(len(todos[0]), args.target, args.file.name)
         exit(1)
 
     if todos[1]: # If todos has positional arrays
@@ -296,7 +316,7 @@ def main():
 
     todos = formatTodos(todos, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber, args.summary, args.bullet)
 
-    printMatches(len(todos), args.target)
+    printMatches(len(todos), args.target, args.file.name)
 
     if not args.quiet:
         printTodos(todos)
