@@ -297,6 +297,8 @@ def main():
 
     if not args.file:
         args.file = finder.findInFiles(args.target, fileExtensions)
+    else:
+        args.file = [args.file.name]
 
     if not args.file[0]: # If array is empty
         printMatches(len(args.file)-1, args.target)
