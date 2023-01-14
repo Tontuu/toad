@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
-import argparse, re, glob
+import argparse
+import re
+import pprint
 from colorama import Fore, Style
+from lib import finder
+
+
 
 helpMessage = Style.BRIGHT + Fore.LIGHTRED_EX + """\
 Usage""" + Style.RESET_ALL + """: toad [OPTION...] [file|main]
@@ -17,6 +22,7 @@ Options""" + Style.RESET_ALL + """:
   --summary                    Specifies custom summary
   --bullet                     Specifies custom bullet list symbol
 
+  --no-filename                Does not show filename which pattern was matched
   --no-line                    Does not show line number which pattern was matched, default is true
   --no-markdown, --no-md       Does not show markdown separator symbol in output MD file
   --no-sort                    Enumerate todos in the pattern order found accordingly to specified order patterns
@@ -35,6 +41,7 @@ def makeArgs():
 
     parser.add_argument("-o", "--output-file", type=argparse.FileType('w'))
     parser.add_argument("-q", "--quiet", "--silent",      action="store_true")
+    parser.add_argument("--no-filename",                  action="store_false")
     parser.add_argument("--no-markdown", "--no-md",       action="store_false")
     parser.add_argument("--no-sort",                      action="store_false")
     parser.add_argument("--no-line",                      action="store_false")
@@ -68,28 +75,28 @@ def parseMatch(line, target):
 
     return match, None
 
-def grepTodos(file, target, isSortActive):
-    target = target if target else "todo"
+def grepTodos(files, target, isSortActive):
     todos = []
     positionalTodos = []
 
-    with open(file.name) as f:
-        for i, line in enumerate(f):
-            if target in line.lower():
-                number = 0
-                if isSortActive:
-                    (match, number) = parseMatch(line, target)
-                else:
-                    match = parseMatch(line, target)
+    for file in files:
+        with open(file) as f:
+            for i, line in enumerate(f):
+                if target in line.lower():
+                    number = 0
+                    if isSortActive:
+                        (match, number) = parseMatch(line, target)
+                    else:
+                        match = parseMatch(line, target)
 
-                if not match: continue
+                    if not match: continue
 
-                todo = {"body": line.strip(), "lineNumber": i+1}
+                    todo = {"body": line.strip(), "lineNumber": i+1, "filename": file}
 
-                if number:
-                    positionalTodos.append([todo, number])
-                else:
-                    todos.append(todo)
+                    if number:
+                        positionalTodos.append([todo, number])
+                    else:
+                        todos.append(todo)
 
     if positionalTodos:
         return todos, positionalTodos
@@ -118,7 +125,7 @@ def sortTodos(todos, positionalTodos):
 
     return todos
 
-def formatTodos(todos, isSortActive=True, isLineNumberActive=True, isToFormatSummary=True, isToFormatNumber=True, summary=None, bulletSymbol=None):
+def formatTodos(todos, isFilenameActive=True, isSortActive=True, isLineNumberActive=True, isToFormatSummary=True, isToFormatNumber=True, summary=None, bulletSymbol=None):
 
     # User futurally choice.
     if isToFormatSummary is True:
@@ -126,28 +133,29 @@ def formatTodos(todos, isSortActive=True, isLineNumberActive=True, isToFormatSum
 
     if bulletSymbol is None: bulletSymbol = "•"
 
-    spaceToFill = " " * len(bulletSymbol)
-
     newTodos = []
     for i, todo in enumerate(todos):
         lineNumber = todo["lineNumber"]
         dict = {}
 
+        if isFilenameActive is True:
+            filename = todo["filename"]
+            dict["filename"] = "{}".format(filename)
 
         if isToFormatSummary is False:
             body = todo["body"].strip()
-            dict["str"] = "{}".format(body)
+            dict["body"] = "{}".format(body)
         else:
             body = todo["body"].split(":")[1].strip()
 
             if isSortActive:
-                dict["str"] = "{} {}[{}]: {}".format(bulletSymbol, summary, i+1, body)
+                dict["body"] = "{} {}[{}]: {}".format(bulletSymbol, summary, i+1, body)
             else:
-                dict["str"] = "{} {}: {}".format(bulletSymbol, summary, body)
+                dict["body"] = "{} {}: {}".format(bulletSymbol, summary, body)
 
         if isLineNumberActive:
             if isToFormatNumber is True:
-                dict["lineNumber"] = " {}({})".format(spaceToFill, lineNumber)
+                dict["lineNumber"] = "{}".format(lineNumber)
             else:
                 dict["lineNumber"] = lineNumber
 
@@ -159,60 +167,67 @@ def printTodos(todos, highlightMatch=False, target="todo"):
     # Get biggest string length to format as box
     biggestLength = 0
     for todo in todos:
-         if (len(todo["str"]) > biggestLength):
-             biggestLength = len(todo["str"])
+         if (len(todo["body"]) > biggestLength):
+             biggestLength = len(todo["body"])
 
     separator = '-' * (biggestLength+2)
 
     print(separator)
     for todo in todos:
-        emptySpace = ' ' * (len(separator) - len(todo["str"]))
-
+        emptySpace = ' ' * (len(separator) - len(todo["body"]))
 
         if highlightMatch:
-            todo_match = re.findall(target, todo["str"], re.IGNORECASE)[0]
-            todo["str"] = todo["str"].replace(todo_match, "{}{}{}".format(Style.BRIGHT + Fore.RED, todo_match, Style.RESET_ALL))
+            todo_match = re.findall(target, todo["body"], re.IGNORECASE)[0]
+            todo["body"] = todo["body"].replace(todo_match, "{}{}{}".format(Style.BRIGHT + Fore.RED, todo_match, Style.RESET_ALL))
 
-        print(todo["str"] + emptySpace + '|')
+        print(todo["body"] + emptySpace + '|')
 
-        if "lineNumber" in todo:
-            lineNumber = "{}".format(todo["lineNumber"])
-            emptySpace = ' ' * (len(separator) - len(lineNumber))
-            print(lineNumber + emptySpace + '|')
+        if "filename" in todo:
+            filename = todo["filename"]
+            if "lineNumber" in todo:
+                lineNumber = "{}".format(todo["lineNumber"])
+                emptySpace = ' ' * (len(separator) - (len(lineNumber) + len(filename)+1))
+                str = "{}{}{}:{}{}|".format(Fore.YELLOW, filename, Style.RESET_ALL, lineNumber, emptySpace)
+            else:
+                emptySpace = ' ' * (len(separator) - (len(filename)))
+                str = "{}{}{}{}|".format(Fore.YELLOW, filename, Style.RESET_ALL, emptySpace)
+
+            print(str)
 
         print(separator)
 
 
-def writeTodos(todos, file, markdown, isLineNumberActive):
+def writeTodos(todos, outputFile, isMarkdownActive, isFilenameActive, isLineNumberActive):
     for todo in todos:
-        file.write(todo["str"])
-        file.write('\n')
+        outputFile.write(todo["body"])
+        outputFile.write('\n')
 
-        if "lineNumber" in todo:
-            file.write(todo["lineNumber"])
-            file.write('\n')
+        if "filename" in todo and isFilenameActive:
+            outputFile.write(todo["filename"])
+            if "lineNumber" in todo and isLineNumberActive:
+                outputFile.write(":{}".format(todo["lineNumber"]))
 
-        if markdown:
-            if file.name.endswith('.md'):
-                file.write("---")
-                file.write('\n')
+            outputFile.write('\n')
+
+        if isMarkdownActive:
+            if outputFile.name.endswith('.md'):
+                outputFile.write("---")
+                outputFile.write('\n')
 
         if todo != todos[-1]:
-            file.write('\n')
+            outputFile.write('\n')
 
-    file.close()
-    print("To-dos added to {}{}{} file".format(Style.BRIGHT + Fore.RED, file.name, Style.RESET_ALL))
+    outputFile.close()
+    print("To-dos added to {}{}{} file".format(Style.BRIGHT + Fore.RED, outputFile.name, Style.RESET_ALL))
 
-def printMatches(count, target, filename):
+def printMatches(count, target):
     target = target if target else "todo"
 
-    print("Found {}{}{} matches for {}{}{} in {}{}{}"
+    print("Found {}{}{} matches for {}{}{}"
           .format(Style.BRIGHT + Fore.RED,
                   count, Style.RESET_ALL,
                   Style.BRIGHT + Fore.RED,
-                  target, Style.RESET_ALL,
-                  Style.BRIGHT + Fore.RED,
-                  filename, Style.RESET_ALL))
+                  target, Style.RESET_ALL,))
 
 def deletePrompt(prompt):
     while "Invalid answer":
@@ -225,18 +240,20 @@ def deletePrompt(prompt):
         print("Invalid answer")
 
 def deleteTodos(file, target):
-    isSortActive = False
+    isFilenameActive = True
     isLineNumberActive = True
+    isSortActive = False
     isToFormatSummary = False
     isToFormatNumber = False
 
     todos = grepTodos(file, target, isSortActive)[0] # Index 0 because it's not sorted
-    printMatches(len(todos), target, file.name)
+    printMatches(len(todos), target)
 
-    if len(todos) == 0:
+    if not todos[0]: # If array is empty
+        printMatches(len(args.file)-1, args.target)
         exit(1)
 
-    todos = formatTodos(todos, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber)
+    todos = formatTodos(todos, isFilenameActive, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber)
 
     highlightMatch = True
     printTodos(todos, highlightMatch, target)
@@ -247,49 +264,43 @@ def deleteTodos(file, target):
     if isToDelete is False: exit(0)
 
     data = []
-    with open(file.name, "r+") as f:
-        for i, line in enumerate(f):
-            isToDeleteLine = False;
+    for file in todos:
+        with open(file["filename"], "r+") as f:
+            for i, line in enumerate(f):
+                isToDeleteLine = False;
 
-            for todo in todos:
-                if i+1 == todo["lineNumber"]:
-                    isToDeleteLine = True
-                    break;
+                for todo in todos:
+                    if i+1 == todo["lineNumber"]:
+                        isToDeleteLine = True
+                        break;
 
-            if isToDeleteLine is False: data.append(line)
+                if isToDeleteLine is False: data.append(line)
 
-        f.seek(0)
+            f.seek(0)
 
-        for line in data:
-            f.write(line)
+            for line in data:
+                f.write(line)
 
-        f.truncate()
+            f.truncate()
 
     print("All matches has been deleted from file!")
     exit(0)
 
-def searchFile(pattern):
-    files = glob.glob("**/main.*", recursive=True)
-    files = list(filter(lambda file: file.count('.') < 2, files))
-
-    if not files:
-        print("toad: error: current dir has no " + pattern + " file")
-        exit(1)
-
-    if len(files) > 1:
-        print("toad: error: current dir has more than one " + pattern + " file")
-        for file in files:
-            print("- " + file)
-        exit(1)
-
-    return open(files[0])
-
 
 def main():
+    fileExtensions = ["py", "c", "rb", "cpp", "js", "rs", "s", "cs", "java"]
+
     args = makeArgs()
 
+    if not args.target:
+        args.target = "todo"
+
     if not args.file:
-        args.file = searchFile("main")
+        args.file = finder.findInFiles(args.target, fileExtensions)
+
+    if not args.file[0]: # If array is empty
+        printMatches(len(args.file)-1, args.target)
+        exit(1)
 
     if (args.delete):
         deleteTodos(args.file, args.delete)
@@ -300,29 +311,29 @@ def main():
 
     todos = grepTodos(args.file, args.target, args.no_sort)
 
-    if not todos[0]: # If array is empty
-        printMatches(len(todos[0]), args.target, args.file.name)
-        exit(1)
-
     if todos[1]: # If todos has positional arrays
         todos = sortTodos(todos[0], todos[1])
     else:
         todos = todos[0]
 
+    isFilenameActive = args.no_filename; # Default is true
     isSortActive = args.no_sort; # Default is true
     isLineNumberActive = args.no_line # Default is True
     isToFormatSummary = True
     isToFormatNumber = True
 
-    todos = formatTodos(todos, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber, args.summary, args.bullet)
 
-    printMatches(len(todos), args.target, args.file.name)
-
-    if not args.quiet:
-        printTodos(todos)
+    printMatches(len(todos), args.target)
 
     if args.output_file:
-        writeTodos(todos, args.output_file, args.no_markdown, args.no_line)
+        writeTodos(todos, args.output_file, args.no_markdown, args.no_filename, args.no_line)
+
+    todos = formatTodos(todos, isFilenameActive, isSortActive, isLineNumberActive, isToFormatSummary, isToFormatNumber, args.summary, args.bullet)
+
+    if not args.quiet:
+        highlightMatches = True
+        printTodos(todos, highlightMatches)
+
 
 
 if __name__ == "__main__":
