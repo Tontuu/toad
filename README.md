@@ -5,7 +5,8 @@ Parse TODO patterns inside a source file.
 
 ## Installation
 ```console
-$ git clone https://github.com/Tontuu/toad.git
+$ git clone https://github.com/Tontuu/toad.git && toad
+$ pip install colorama
 $ chmod +x toad
 $ sudo ln -s /path/to/script/toad /usr/local/bin # Add to your preferred path
 ```

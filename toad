@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
+# TODO: Implement find main file recursively automatically
+
 import argparse, re
+from colorama import Fore, Style
 
-helpMessage = """\
-\033[1;31mUsage\033[0m: toad [OPTION...] file
+helpMessage = Style.BRIGHT + Fore.LIGHTRED_EX + """\
+Usage""" + Style.RESET_ALL + """: toad [OPTION...] file
 
-Parse TODO patterns in a file
+Parse TODO patterns in a file """ + Style.BRIGHT + Fore.LIGHTRED_EX + """
 
-\033[1;31mOptions\033[0m:
+Options""" + Style.RESET_ALL + """:
   -h, --help                   Show this help message and exit
 
   -t, --target                 Specifies target pattern
@@ -170,7 +173,7 @@ def printTodos(todos, highlightMatch=False, target="todo"):
 
         if highlightMatch:
             todo_match = re.findall(target, todo["str"], re.IGNORECASE)[0]
-            todo["str"] = todo["str"].replace(todo_match, "\033[1;31m{}\033[0m".format(todo_match))
+            todo["str"] = todo["str"].replace(todo_match, "{}{}{}".format(Style.BRIGHT + Fore.RED, todo_match, Style.RESET_ALL))
 
         print(todo["str"] + emptySpace + '|')
 
@@ -200,13 +203,16 @@ def writeTodos(todos, file, markdown, isLineNumberActive):
             file.write('\n')
 
     file.close()
-    print("To-dos added to \033[1;31m{}\033[0m file".format(file.name))
+    print("To-dos added to {}{}{} file".format(Style.BRIGHT + Fore.RED, file.name, Style.RESET_ALL))
 
 def printMatches(count, target):
     target = target if target else "todo"
 
-    print("Found \033[1;31m{}\033[0m matches for \033[1;31m{}\033[0m"
-          .format(count, target))
+    print("Found {}{}{} matches for {}{}{}"
+          .format(Style.BRIGHT + Fore.RED,
+                  count, Style.RESET_ALL,
+                  Style.BRIGHT + Fore.RED,
+                  target, Style.RESET_ALL))
 
 def deletePrompt(prompt):
     while "Invalid answer":
