@@ -185,7 +185,7 @@ def printTodos(todos, highlightMatch=False, target="todo"):
         if "filename" in todo:
             filename = todo["filename"]
             if "lineNumber" in todo:
-                lineNumber = "{}".format(todo["lineNumber"])
+                lineNumber = "{}:".format(todo["lineNumber"])
                 emptySpace = ' ' * (len(separator) - (len(lineNumber) + len(filename)+1))
                 str = "{}{}{}:{}{}|".format(Fore.YELLOW, filename, Style.RESET_ALL, lineNumber, emptySpace)
             else:
